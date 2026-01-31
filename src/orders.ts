@@ -1,6 +1,7 @@
 import { GetMarketResponse, Order } from "kalshi-typescript";
 import api from "./api";
 import config from "./config";
+import { confirm } from "./input";
 
 export async function placeOrder(market: string, count: number) {
   const { data } = await api.markets.getMarket(market);
@@ -10,10 +11,15 @@ export async function placeOrder(market: string, count: number) {
   const estimatedProfit = estimateProfit(buyPrice, sellPrice, count);
 
   console.log(
-    `Placing orders on ${market} for ${count} contracts: Buy at $${buyPrice.toFixed(
+    `[CONFIRM y/N] Place orders on ${market} for ${count} contracts: Buy at $${buyPrice.toFixed(
       4,
     )}, Sell at $${sellPrice.toFixed(4)} | Estimated Profit: $${estimatedProfit.toFixed(2)}`,
   );
+
+  if (!(await confirm())) {
+    console.log("Order cancelled.");
+    return;
+  }
 
   const [buyRes, sellRes] = await Promise.all([
     api.orders.createOrder({
@@ -68,5 +74,5 @@ function getBuyPrice(market: GetMarketResponse): number {
 function getSellPrice(market: GetMarketResponse): number {
   const price =
     Number(market.market.last_price_dollars) + config.targetSpread / 2;
-  return Math.ceil(price * 100) / 100;
+  return Math.floor(price * 100) / 100;
 }
