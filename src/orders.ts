@@ -3,29 +3,49 @@ import api from "./api";
 import config from "./config";
 import { confirm } from "./input";
 
-export async function placeOrder(market: string, count: number) {
+export async function placeDoubleOrder(market: string, count: number) {
+  if (count % 2 !== 0) {
+    throw new Error("Count must be an even number for double orders.");
+  }
+  
+  const [yesOrders, noOrders] = await Promise.all([
+    placeOrder(market, count / 2, "yes", false),
+    placeOrder(market, count / 2, "no", false),
+  ]);
+
+  return { yesOrders, noOrders };
+}
+
+export async function placeOrder(
+  market: string,
+  count: number,
+  side: "yes" | "no",
+  requireConfirmation = true,
+) {
   const { data } = await api.markets.getMarket(market);
 
   const buyPrice = getBuyPrice(data);
   const sellPrice = getSellPrice(data);
   const estimatedProfit = estimateProfit(buyPrice, sellPrice, count);
 
-  console.log(
-    `[CONFIRM y/N] Place orders on ${market} for ${count} contracts: Buy at $${buyPrice.toFixed(
-      4,
-    )}, Sell at $${sellPrice.toFixed(4)} | Estimated Profit: $${estimatedProfit.toFixed(2)}`,
-  );
+  if (requireConfirmation) {
+    console.log(
+      `[CONFIRM y/N] Place orders on ${market} for ${count} contracts: Buy at $${buyPrice.toFixed(
+        4,
+      )}, Sell at $${sellPrice.toFixed(4)} | Estimated Profit: $${estimatedProfit.toFixed(2)}`,
+    );
 
-  if (!(await confirm())) {
-    console.log("Order cancelled.");
-    return;
+    if (!(await confirm())) {
+      console.log("Order cancelled.");
+      return;
+    }
   }
 
   const [buyRes, sellRes] = await Promise.all([
     api.orders.createOrder({
       ticker: market,
       type: "limit",
-      side: "yes",
+      side,
       count,
       yes_price_dollars: buyPrice.toFixed(4),
       action: "buy",
@@ -33,7 +53,7 @@ export async function placeOrder(market: string, count: number) {
     api.orders.createOrder({
       ticker: market,
       type: "limit",
-      side: "yes",
+      side,
       count,
       yes_price_dollars: sellPrice.toFixed(4),
       action: "sell",

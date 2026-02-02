@@ -6,6 +6,6 @@ export default {
     privateKeyPath: "private.key",
     basePath: process.env.API_URL,
   }),
-  ticker: "KXPRESPERSON-28-JVAN",
+  tickers: ["KXPRESPERSON-28-JVAN", "KXPRESPERSON-28-GNEWS"],
   targetSpread: 0.01,
 };
